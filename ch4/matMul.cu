@@ -24,11 +24,20 @@ void tiledMatMulKernel(float* d_M, float* d_N, float* d_P, int width)
     __shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
     __shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 
-    for (int phase=0; phase<width/TILE_WIDTH; phase++) {
+    for (int phase=0; phase<ceil(width / (float)TILE_WIDTH); phase++) {
         // Load designated tile element
         // Collectively, each phase uses one tile of M and one tile of N
-        Mds[ty][tx] = d_M[Row * width + (phase * TILE_WIDTH + tx)];
-        Nds[ty][tx] = d_N[(phase * TILE_WIDTH + ty) * width + Col];
+        int d_M_Col = phase * TILE_WIDTH + tx;
+        int d_N_Row = phase * TILE_WIDTH + ty;
+
+        if (Row < width && d_M_Col < width)
+            Mds[ty][tx] = d_M[Row * width + d_M_Col];
+        else 
+            Mds[ty][tx] = 0.0;
+        if (d_N_Row < width && Col < width)
+            Nds[ty][tx] = d_N[d_N_Row * width + Col];
+        else 
+            Nds[ty][tx] = 0.0;
 
         __syncthreads();    // Synchronization - Tile elements of this phase are loaded
 
@@ -39,7 +48,8 @@ void tiledMatMulKernel(float* d_M, float* d_N, float* d_P, int width)
         __syncthreads();    // Synchronization - Wait all threads to finish this phase. Tile elements in shared memory will be refreshed.
     }
 
-    d_P[Row * width + Col] = pval;
+    if (Row < width && Col < width)
+        d_P[Row * width + Col] = pval;
 }
 
 __global__
@@ -130,5 +140,5 @@ int main(int argc, char* argv[])
     (float)((e1-s1)/CLOCKS_PER_SEC), 
     (float)((e2-s2))/CLOCKS_PER_SEC);
 
-    printf("[s1]%d [e1]%d [s2]%d [e2]%d", int(s1), int(e1), int(s2), int(e2));
+    printf("[s1]%d [e1]%d [s2]%d [e2]%d\n", int(s1), int(e1), int(s2), int(e2));
 }
