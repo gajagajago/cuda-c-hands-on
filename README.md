@@ -19,8 +19,8 @@ Hands-on exercises from 'Programming Massively Parallel Processors' 3rd Edition 
 * Toolkit/Library path for me: `/home/gajagajago/cuda-11.7/`
 * Export paths to your terminal's configuration file. (.zshrc OR .bashrc)
 ``` zsh
-export PATH=/home/gajagajago/cuda-11.7/bin:$PATH
-export LD_LIBRARY_PATH=/home/gajagajago/cuda-11.7/lib64:$LD_LIBRARY_PATH
+export PATH="/home/gajagajago/cuda-11.7/bin:$PATH"
+export LD_LIBRARY_PATH="/home/gajagajago/cuda-11.7/lib64:$LD_LIBRARY_PATH" 
 ``` 
 * Apply the edited path
 ``` zsh
