@@ -3,8 +3,9 @@
 #include <stdlib.h>
 
 #define HORIZONTAL_BLOCK_GRANULARITY 2 // Each thread block computes $HORIZONTAL_BLOCK_GRANULARITY tiles adjacent in horizontal direction
-#define TILE_WIDTH 4
+#define TILE_WIDTH 2
 
+// TODO: Add boundary checks, especially for granularity existence 
 __global__
 void matMulOptKernel(float* d_M, float* d_N, float* d_P, int width) 
 {
@@ -20,7 +21,7 @@ void matMulOptKernel(float* d_M, float* d_N, float* d_P, int width)
     int Cols[HORIZONTAL_BLOCK_GRANULARITY];
 
     for (int i = 0; i < HORIZONTAL_BLOCK_GRANULARITY; i++) {
-        Cols[i] = blockDim.x * (blockIdx.x + i) + threadIdx.x;
+        Cols[i] = blockDim.x * (HORIZONTAL_BLOCK_GRANULARITY * blockIdx.x + i) + threadIdx.x;
     }
 
     // 4. Phase by phase calculation
@@ -32,7 +33,8 @@ void matMulOptKernel(float* d_M, float* d_N, float* d_P, int width)
         
         Mds[threadIdx.y][threadIdx.x] = d_M[Row * width + d_M_Col];
         for (int i = 0; i < HORIZONTAL_BLOCK_GRANULARITY; i++) {
-            Nds[threadIdx.y][phase * TILE_WIDTH + threadIdx.x] = d_N[d_N_Row * width + Cols[i]];
+            // Made mistake once here: Nds[...]["i" * ...] not "phase"
+            Nds[threadIdx.y][i * TILE_WIDTH + threadIdx.x] = d_N[d_N_Row * width + Cols[i]];
         }
 
         __syncthreads();
