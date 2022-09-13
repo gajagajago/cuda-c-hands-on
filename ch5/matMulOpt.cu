@@ -51,3 +51,67 @@ void matMulOptKernel(float* d_M, float* d_N, float* d_P, int width)
         d_P[Row * width + Cols[i]] = p_vals[i];
     }
 }
+
+void matMul(float* h_M, float* h_N, float* h_P, int width)
+{
+    int size = width * width * sizeof(float);
+
+    float *d_M, *d_N, *d_P;
+
+    cudaMalloc((void**)&d_M, size);
+    cudaMalloc((void**)&d_N, size);
+    cudaMalloc((void**)&d_P, size);
+
+    cudaMemcpy(d_M, h_M, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_N, h_N, size, cudaMemcpyHostToDevice);
+
+    dim3 dimGrid(ceil((float)width/(TILE_WIDTH * HORIZONTAL_BLOCK_GRANULARITY)), ceil((float)width/TILE_WIDTH), 1);
+    dim3 dimBlock(TILE_WIDTH, TILE_WIDTH, 1);
+
+    matMulOptKernel<<<dimGrid, dimBlock>>>(d_M, d_N, d_P, width);
+
+    cudaMemcpy(h_P, d_P, size, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_M);
+    cudaFree(d_N);
+    cudaFree(d_P);
+}
+
+int main(int argc, char* argv[])
+{
+    if (argc != 2) {
+        printf("Usage: ./<executable_file> <dimension size of 2D array>\n");
+        exit(1);
+    }
+
+    float *h_M, *h_N, *h_P;
+
+    int width = atoi(argv[1]);
+    int size = width * width * sizeof(float);
+
+    h_M = (float*)malloc(size);
+    h_N = (float*)malloc(size);
+    h_P = (float*)malloc(size);
+
+    for (int i=0; i<width; i++) {
+        for (int j=0; j<width; j++) {
+            // // Random initialize two input arrays
+            // int offset = i*width + j;
+            // srand(time(NULL));
+            // h_M[offset] = (float)(rand()/RAND_MAX);
+            // srand(time(NULL));
+            // h_N[offset] = (float)(rand()/RAND_MAX);
+            h_M[i * width + j] = (float)(i + j);
+            h_N[i * width + j] = (float)(i + j);
+        }
+    }
+
+    matMul(h_M, h_N, h_P, width);
+
+    for (int i=0; i<width; i++) {
+        for (int j=0; j<width; j++) {
+            printf("%.1f ", h_P[i * width + j]);
+        }
+        printf("\n");
+    }
+}
