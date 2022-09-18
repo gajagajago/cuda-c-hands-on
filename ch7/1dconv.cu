@@ -5,7 +5,7 @@
 #define MASK_WIDTH 3
 #define TILE_WIDTH 4
 
-float mask[MASK_WIDTH] = {1, 1, 1};
+float mask[MASK_WIDTH] = {1, 2, 1};
 __constant__ float M[MASK_WIDTH];
 
 __global__
@@ -31,19 +31,22 @@ void tiledConvolution1DKernel(float* d_N, float* d_P, int width)
     // 3. Load internal cells
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
-    N_ds[n + threadIdx.x] = d_N[i];
+    N_ds[n + threadIdx.x] = i < width ? d_N[i] : 0;
 
     // 4. sync
     __syncthreads();
 
     // 5. Convolution
-    float p = 0.0;
+    if (i < width) {
 
-    for (int j = 0; j < MASK_WIDTH; j++) {
-        p += N_ds[threadIdx.x + j] * M[j];
+        float p = 0.0;
+
+        for (int j = 0; j < MASK_WIDTH; j++) {
+            p += N_ds[threadIdx.x + j] * M[j];
+        }
+
+        d_P[i] = p;
     }
-
-    d_P[i] = p;
 }
 
 void tiledConvolution1D(float* N, float* P, int width)
