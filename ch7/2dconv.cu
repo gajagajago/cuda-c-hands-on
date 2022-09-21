@@ -18,13 +18,19 @@ void tiledConvolution2DKernel(float* d_N, float* d_P, int width)
     int out_row_idx = blockDim.y * blockIdx.y + threadIdx.y;
     int out_col_idx = blockDim.x * blockIdx.x + threadIdx.x;
 
+    int out_idx_valid = out_row_idx >= 0 && out_row_idx < width && out_col_idx >=0 && out_col_idx < width;
+
     __shared__ float N_ds[TILE_WIDTH][TILE_WIDTH];
 
     int conv_row_start_idx = out_row_idx - MASK_WIDTH / 2;
     int conv_col_start_idx = out_col_idx - MASK_WIDTH / 2;
 
     // 1. Load to shared memory
-    N_ds[threadIdx.y][threadIdx.x] = d_N[out_row_idx * width + out_col_idx];
+    if (out_idx_valid) {
+        N_ds[threadIdx.y][threadIdx.x] = d_N[out_row_idx * width + out_col_idx];
+    } else {
+        N_ds[threadIdx.y][threadIdx.x] = 0.0;
+    }
 
     __syncthreads();
 
@@ -53,7 +59,9 @@ void tiledConvolution2DKernel(float* d_N, float* d_P, int width)
         }
     }
 
-    d_P[out_row_idx * width + out_col_idx] = p;
+    if (out_idx_valid) {
+        d_P[out_row_idx * width + out_col_idx] = p;
+    }
 }
 
 void tiledConvolution2D(float* N, float* P, int width)
